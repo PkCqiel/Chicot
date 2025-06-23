@@ -1,0 +1,18 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+#Update global list after boss blind payout
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = "if G.GAME.round_resets.blind_states.Boss == 'Defeated' then "
+position = "after"
+payload = '''
+    -- chicot save_beaten_boss.toml - patch start
+    -- print(G.GAME.round_resets.blind.key)
+    CHIC.funcs.add_beaten_boss_blind(G.GAME.round_resets.blind.key)
+    -- patch end
+
+'''
+match_indent = true

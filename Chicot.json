@@ -1,0 +1,13 @@
+{
+    "id": "chicot",
+    "name": "Chicot's Joust",
+    "author": ["Pk"],
+    "description": "Defeat boss blinds to unlock them as Jokers during runs! My first take on a themed mod",
+    "prefix": "chic",
+    "main_file": "Chicot.lua",
+    "badge_colour": "fd5f55",
+    "dependencies": [
+        "Steamodded (>=1.0.0~ALPHA-1225a)"
+    ],
+    "version": "0.1.0"
+}
