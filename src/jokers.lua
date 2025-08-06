@@ -875,7 +875,7 @@ SMODS.Joker {
 }
 
 -- The Arm, retrigger hand upgrades
-    -- made a custom context through a toml patch, probably can and should be a hook tho
+    -- made a custom context through a function lua hook
 SMODS.Joker {
     key = "arm",
     pos = { x = 3, y = 5 }, -- space joker sprite
@@ -924,6 +924,13 @@ SMODS.Joker {
         return ret_bool
     end
 }
+    -- Custom context hook into: functions/common_events.lua/level_up_hand()
+local level_up_hand_old = level_up_hand
+level_up_hand = function(card, hand, instant, amount,...)
+    local effects
+    SMODS.calculate_context({chic_leveled_up = true, card = card, hand = hand, instant = instant, amount = amount}, effects)
+    return level_up_hand_old(card, hand, instant, amount,...)
+end
 
 -- Fish, +mult if discard used before hand played
 SMODS.Joker {
