@@ -82,6 +82,26 @@ CHIC = {
                 end
             end
             return available
+        end,
+
+        -- for cerulean bell joker, guarantee removal of chime sticker
+        --- @param sticker_key string
+        remove_sticker_all_cards = function (sticker_key)
+            for _, playing_card in ipairs(G.hand.cards) do
+                if playing_card.ability[sticker_key] then
+                    playing_card:remove_sticker(sticker_key)
+                end
+            end
+            for _, playing_card in ipairs(G.deck.cards) do
+                if playing_card.ability[sticker_key] then
+                    playing_card:remove_sticker(sticker_key)
+                end
+            end
+            for _, playing_card in ipairs(G.discard.cards) do
+                if playing_card.ability[sticker_key] then
+                    playing_card:remove_sticker(sticker_key)
+                end
+            end
         end
     }
 }

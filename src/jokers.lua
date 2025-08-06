@@ -1816,7 +1816,7 @@ SMODS.Joker {
     discovered = true,
 
     -- maybe lower xmult_gain to 0.25 if I care about balance
-    config = { extra = { Xmult_gain = 0.5, Xmult = 1, selected_card = nil, sticker_key = "chic_chime_sticker"}, },
+    config = { extra = { Xmult_gain = 0.5, Xmult = 1, sticker_key = "chic_chime_sticker"}, },
     loc_vars = function(self, info_queue, card)
         info_queue[#info_queue + 1] = {key = card.ability.extra.sticker_key, set = 'Other'}
         return { vars = { card.ability.extra.Xmult_gain, card.ability.extra.Xmult } }
@@ -1832,55 +1832,44 @@ SMODS.Joker {
         }
     },
 
-    calculate = function(self, card, context)
-        -- Can't find a context for not just after scoring but after finishing drawing cards, like how the blind does it
-            --Decided to use custom context, implemented in `drawn_to_hand_context.toml`
-        if context.chic_drawn_to_hand and not context.blueprint then
-
-            -- unsure but to keep it consistent, always reset the sticker even if the selected card was left held in hand
-            if card.ability.extra.selected_card and card.ability.extra.selected_card.ability[card.ability.extra.sticker_key] then
-                card.ability.extra.selected_card:remove_sticker(card.ability.extra.sticker_key)
-                card.ability.extra.selected_card = nil
+    calculate= function (self,card,context)
+        if context.hand_drawn and not context.blueprint then
+            for _, playing_card in ipairs(G.hand.cards) do
+                if playing_card.ability[card.ability.extra.sticker_key] then
+                    playing_card:remove_sticker(card.ability.extra.sticker_key)
+                end
             end
-
-            local random_index = pseudorandom('chic_cerulean_bell', 1, #G.hand.cards)
-            card.ability.extra.selected_card = G.hand.cards[random_index]
-            card.ability.extra.selected_card:add_sticker(card.ability.extra.sticker_key, true)
-
+            local chimed_card = pseudorandom_element(G.hand.cards, 'chic_cerulean_bell') or G.hand.cards[1]
+            chimed_card.ability.chic_bell_selection = true
+            chimed_card:add_sticker(card.ability.extra.sticker_key, true)
             return{
-                    message = "Chime!",
-                    colour = G.C.blue,
-                    card = card.ability.extra.selected_card -- its cool to see the chime card shake
-                }
-        end
-
-        if context.discard and card.ability.extra.selected_card and not context.blueprint then
-            if context.other_card == card.ability.extra.selected_card and context.other_card.ability[card.ability.extra.sticker_key] then
-                card.ability.extra.selected_card:remove_sticker(card.ability.extra.sticker_key)
-                card.ability.extra.selected_card = nil
-            end
+                message = "Chime!",
+                colour = G.C.BLUE,
+                card = chimed_card -- its cool to see the chime card shake
+            }
         end
 
         if context.before and not context.blueprint then
+            local upgrades = 0
             for k, v in ipairs(context.scoring_hand) do
-                if v == card.ability.extra.selected_card and v.ability[card.ability.extra.sticker_key] then
-                    card.ability.extra.Xmult = card.ability.extra.Xmult + card.ability.extra.Xmult_gain
-                    return{
-                        message = localize('k_upgrade_ex'),
-                        colour = G.C.MULT, 
-                        card = card.ability.extra.selected_card -- its cool to see the chime card shake
-                    }
-                    
+                if v.ability[card.ability.extra.sticker_key] and not v.debuff then
+                    upgrades = upgrades +1
+                    -- its cool to see the chime card shake
+                    G.E_MANAGER:add_event(Event({
+                        func = function()
+                            v:juice_up()
+                            return true
+                        end
+                    }))
                 end
             end
-        end
-
-        if (context.setting_blind or context.end_of_round) and card.ability.extra.selected_card and not context.blueprint then
-            -- since the sticker doesn't seem to remove itself, has to be done through this joker
-            if card.ability.extra.selected_card.ability[ card.ability.extra.sticker_key ] then
-                card.ability.extra.selected_card:remove_sticker( card.ability.extra.sticker_key )
+            if upgrades>0 then
+                card.ability.extra.Xmult = card.ability.extra.Xmult + (card.ability.extra.Xmult_gain*upgrades)
+                return{
+                    message = localize('k_upgrade_ex'),
+                    colour = G.C.MULT, 
+                }
             end
-            card.ability.extra.selected_card = nil
         end
 
         if context.joker_main then
@@ -1888,13 +1877,22 @@ SMODS.Joker {
                 xmult = card.ability.extra.Xmult
             }
         end
+
+        -- sticker removals since the sticker doesn't seem to remove itself
+            -- a bit overkill but it works in all cases
+        if context.discard and not context.blueprint then
+            if context.other_card.ability[card.ability.extra.sticker_key] then
+                context.other_card:remove_sticker(card.ability.extra.sticker_key)
+            end
+        end
+        if (context.setting_blind or context.end_of_round) and not context.blueprint then
+            CHIC.funcs.remove_sticker_all_cards(card.ability.extra.sticker_key)
+        end
     end,
 
-    -- edge case to guarantee now irrelevant sticker is removed when selling joker
+    -- edge case to guarantee sticker is removed when selling joker
     remove_from_deck = function(self, card, from_debuff)
-        if card.ability.extra.selected_card then
-            card.ability.extra.selected_card:remove_sticker("chic_chime_sticker")
-        end
+        CHIC.funcs.remove_sticker_all_cards(card.ability.extra.sticker_key)
     end,
 
     in_pool = function(self, args)
@@ -1935,13 +1933,9 @@ SMODS.Sticker({
             -- done but the shader is a bit too shiny, noticeable nitpick
 
     calculate = function(self, card, context)
-        -- thought delegating removal here was smart but appereantly this doesn't work
+        -- maybe delegating removal here is smarter, I'll leave it duped while undecided
         if context.setting_blind or context.end_of_round then
-            for k, v in pairs(G.playing_cards.cards) do
-                if v.ability["chic_chime_sticker"] then 
-                    v:remove_sticker("chic_chime_sticker")
-                end
-            end
+            CHIC.funcs.remove_sticker_all_cards("chic_chime_sticker")
         end
     end,
 })

@@ -828,6 +828,11 @@ SMODS.Challenge{
         name = "Cerulean Bell Check"
     },
     consumeables = {
+        {id="c_death"},
+        {id="c_death"},
+        {id="c_death"},
+        {id="c_death"},
+        {id="c_hanged_man"},
     },
     rules = {
         modifiers = {
@@ -844,6 +849,9 @@ SMODS.Challenge{
     jokers = {
         {
             id = "j_chic_cerulean_bell",
+        },
+        {
+            id = "j_dna",
         },
 
     },
